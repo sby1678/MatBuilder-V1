@@ -623,6 +623,7 @@ class Surface:
 		                       # and atome below
 		self.avecs = np.array((0,0,0)) # anticpatory vectors
 		self.nneigh = 0 # number of nearst neigbours
+		self.exists = False # flag to check if substrate exists
 
 	def bulk(self,ncells):
 		# 
@@ -1273,8 +1274,8 @@ class Surface:
 		nu = np.linalg.norm(self.u)
 		nv = np.linalg.norm(self.v)
 		# Rounded values
-		nur = round(np.linalg.norm(self.u),3)
-		nvr = round(np.linalg.norm(self.v),3)
+		nur = round(np.linalg.norm(self.u),6)
+		nvr = round(np.linalg.norm(self.v),6)
 
 		primitive = False
 
@@ -1287,7 +1288,7 @@ class Surface:
 			if self.planeatms[idx[i]] == self.planeatms[0]:
 				self.a = self.planepos[idx[i]]
 	
-				na = round(np.linalg.norm(self.a),3)
+				na = round(np.linalg.norm(self.a),6)
 	
 				# 1st condtition
 				if nur >= na:
@@ -1318,7 +1319,7 @@ class Surface:
 			if self.planeatms[idx[i]] == self.planeatms[0]:
 				self.b = self.planepos[idx[i]]
 	
-				nb = round(np.linalg.norm(self.b),3)
+				nb = round(np.linalg.norm(self.b),6)
 	
 				# 1st condtition
 				if nvr >= nb:
@@ -1346,15 +1347,15 @@ class Surface:
 						linear = False
 	
 				if primitive and (not linear): break
+
 			i += 1
-
-		# Reduce a and b
-		self.a, self.b = reduction(self.a, self.b)
-
-#                print "REDUCED VECTORS"
-#                print "A", self.a, np.linalg.norm(self.a)
-#                print "B", self.b, np.linalg.norm(self.b)
 		
+		if primitive:
+			self.exists = True
+
+			# Reduce a and b
+			self.a, self.b = reduction(self.a, self.b)
+
 		# Shift coordinates back to orginals positions 
 		self.planepos += orgsave
 
@@ -1754,6 +1755,7 @@ for subMillerString in MillerList:
 	print
 	print "**********************************"
 	print "Constructing bulk Substrate"
+	print "Orientation: %s"%subMillerString
 	i,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
 	Miller = getMillerFromString(subMillerString)
 	nbulk = max(Miller)*2 # use the max Miller index to ensure non-empty surface
@@ -1764,6 +1766,11 @@ for subMillerString in MillerList:
 	Sub.construct()
 	Sub.plane()
 	Sub.initpvecNEW()
+	if not Sub.exists: 
+		print "!!! Orientation does not exists!!!"
+		print "!!! Proceeding to next one !!!"
+		print "**********************************"
+		continue # if given plane does not exists, continue to next one
 	Sub.primitivecell()
 
 	vecsS = Superlattice(Sub.a,Sub.b,5) # multiplication of unit cells
@@ -1794,8 +1801,10 @@ for subMillerString in MillerList:
 
 	print "OUTPUTTING COORDINATES"
 	# Output in cartesian coordiantes
-
-	strufilename=subCIF.split(".")[0]+" "+subMillerString
+	millerLab= subMillerString.split()
+	strufilename=subCIF.split(".")[0]+"-%s%s%s"%(millerLab[0],
+			                            millerLab[1],
+						    millerLab[2],)
 
 	"""
 	file = open(strufilename+".xyz",'w')
