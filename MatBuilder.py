@@ -1263,6 +1263,9 @@ class Surface:
 		#   If any of those conditions is met, the pair of vectors 
 		#   are the primitive vectors for this lattice
 
+		# Primitive vectors not found yet
+		self.exists = False
+		
 		# Shift coordinates so that 1st atom is in origin
 		orgsave = self.planepos[0]
 		self.planepos -= self.planepos[0]
@@ -1373,6 +1376,7 @@ class Surface:
 		self.normb=np.linalg.norm(self.b)
 
 		cosphi = np.dot(self.a,self.b)/(self.norma*self.normb)
+		cosphi = round(cosphi,12)
 		phi = m.acos(cosphi)
 		self.phiab = phi * 180/m.pi
 		sinphi = m.sin(phi)
@@ -1423,7 +1427,6 @@ def reduction(a,b):
 	reduced = False
 
 	while not reduced:
-
 		dot = np.dot(a,b)
 
 		if dot < 0:
@@ -1439,8 +1442,7 @@ def reduction(a,b):
 			if normb <= normab:
 				amb = a - b
 				normamb = np.linalg.norm(amb)
-
-				if normb <=normamb:
+				if normb <= normamb:
 					reduced = True
 				else:
 					b = b - a
@@ -1755,6 +1757,20 @@ subCIF, maxMillerInd, nL = readInput(inputFile)
 # create a list of Miller indices
 MillerList=createMillerList(maxMillerInd)
 
+#Read CIF file
+print
+print "********************************************************"
+print "Reading structure from .cif file"
+idMat,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
+
+# Construt big bulk material that will be reused in all calculations
+print "Construction big bulk structure... This might take time."
+bigBulk = Surface(transM,positions,atoms,np.array((0,0,0)))
+bigBulk.bulk(6)
+print "Bulk structure complete"
+print "********************************************************"
+print 
+
 # Start the loop on Miller indices 
 for subMillerString in MillerList:
 	#MATERIAL 1
@@ -1762,12 +1778,14 @@ for subMillerString in MillerList:
 	print "*****************************************"
 	print "Constructing bulk Substrate"
 	print "Orientation: %s"%subMillerString
-	i,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
+	#idMat,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
 	Miller = getMillerFromString(subMillerString)
-	nbulk = max(Miller)*2 # use the max Miller index to ensure non-empty surface
+	#nbulk = max(Miller)*2 # use the max Miller index to ensure non-empty surface
 
 	Sub = Surface(transM,positions,atoms,Miller)
-	Sub.bulk(nbulk)
+#	Sub.bulk(nbulk)
+	Sub.positions = bigBulk.positions.copy()
+	Sub.atoms = bigBulk.atoms
 
 	Sub.construct()
 	Sub.plane()
@@ -1803,9 +1821,11 @@ for subMillerString in MillerList:
 		ii += 1
 
 	#Construct big planes for Substrate and Deposit
-	print "CREATING BULK - this may take time"
-	nbulk2 = max(Miller)*2
-	Sub.bulk(nbulk2)
+	#print "CREATING BULK - this may take time"
+	#nbulk2 = max(Miller)*2
+	#Sub.bulk(nbulk2)
+	Sub.positions = bigBulk.positions.copy()
+	Sub.atoms = bigBulk.atoms
 	Sub.construct()
 	Sub.plane()
 
@@ -1845,5 +1865,5 @@ for subMillerString in MillerList:
 # nlayers? #
 
 # End of program
-print "*****************************************"
+	print "*****************************************"
 print
