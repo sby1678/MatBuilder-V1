@@ -1282,9 +1282,6 @@ class Surface:
 
 		nu = np.linalg.norm(self.u)
 		nv = np.linalg.norm(self.v)
-		# Rounded values
-		nur = round(np.linalg.norm(self.u),6)
-		nvr = round(np.linalg.norm(self.v),6)
 
 		primitive = False
 
@@ -1297,17 +1294,17 @@ class Surface:
 			if self.planeatms[idx[i]] == self.planeatms[0]:
 				self.a = self.planepos[idx[i]]
 	
-				na = round(np.linalg.norm(self.a),6)
+				na = np.linalg.norm(self.a)
 	
 				# 1st condtition
-				if nur >= na:
-					ma = nur%na
+				if nu >= na:
+					ma = nu%na
 				else:
-					ma = na%nur
+					ma = na%nu
 	
 #				print nu,na,ma
 	
-				if ma == 0.0: primitive = True
+				if round(ma,6) == 0.0: primitive = True
 	
 				# 2nd condition
 				dau = np.dot(self.a,self.u)
@@ -1328,15 +1325,15 @@ class Surface:
 			if self.planeatms[idx[i]] == self.planeatms[0]:
 				self.b = self.planepos[idx[i]]
 	
-				nb = round(np.linalg.norm(self.b),6)
+				nb = np.linalg.norm(self.b)
 	
 				# 1st condtition
-				if nvr >= nb:
-					mb = nvr%nb
+				if nv >= nb:
+					mb = nv%nb
 				else:
-					mb = nb%nvr
+					mb = nb%nv
 	
-				if mb == 0.0 : primitive = True
+				if round(mb,6) == 0.0 : primitive = True
 	
 				# 2nd condition
 				dbv = np.dot(self.b,self.v)
@@ -1750,7 +1747,6 @@ class Interface:
 #					#
 #########################################
 
-
 # Read input
 subCIF, maxMillerInd, nL = readInput(inputFile)
 
@@ -1766,11 +1762,13 @@ idMat,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
 # Construt big bulk material that will be reused in all calculations
 print "Construction big bulk structure... This might take time."
 bigBulk = Surface(transM,positions,atoms,np.array((0,0,0)))
-bigBulk.bulk(6)
+bigBulk.bulk(8)
 print "Bulk structure complete"
 print "********************************************************"
 print 
 
+primFailed = [] # stuctures for which cound find primtive vectors
+notExist = [] # stuctures for which given orientation does not exist
 # Start the loop on Miller indices 
 for subMillerString in MillerList:
 	#MATERIAL 1
@@ -1793,6 +1791,7 @@ for subMillerString in MillerList:
 		print "!!! Orientation does not exists!!!"
 		print "!!! Proceeding to next one !!!"
 		print "*****************************************"
+		notExist.append(subMillerString)
 		continue # if given plane does not exists, continue to next one
 
 	Sub.initpvecNEW()
@@ -1800,6 +1799,7 @@ for subMillerString in MillerList:
 		print "!!! Failed to find primitive vectors !!!"
 		print "!!! Proceeding to next orientation  !!!"
 		print "*****************************************"
+		primFailed.append(subMillerString)
 		continue # if given plane does not exists, continue to next one
 
 	Sub.primitivecell()
@@ -1863,7 +1863,25 @@ for subMillerString in MillerList:
 	# end of the loop on Miller indices 
 
 # nlayers? #
-
-# End of program
 	print "*****************************************"
-print
+
+#Output staticits
+nStruc = len(MillerList)
+nPrimFailed = len(primFailed)
+nNotExist = len(notExist)
+nCreated = nStruc - nPrimFailed - nNotExist
+file = open('stats.out','w')
+file.write("Max. Miller Index: %i\n"%maxMillerInd)
+file.write("Total number of possible orientations: %i\n"%nStruc)
+file.write("Number created orientations: %i\n"%nCreated)
+file.write("Number of not existing orientations: %i\n"%nNotExist)
+for i in notExist:
+	file.write("%s\n"%i)
+
+file.write("\nNumber of orientations where primitive vectors failed: %i\n"%nPrimFailed)
+for i in primFailed:
+	file.write("%s\n"%i)
+
+file.close()
+# End of program
+

@@ -1,3 +1,3 @@
 substrate     Si-opt.cif      # CIF file for Substrate
-maxMillerInd  2         # Maximal miller index for all three dimesions
+maxMillerInd  4         # Maximal miller index for all three dimesions
 nLayer        18.5        # Thickness of Deposit/Substrate slabs [A]
