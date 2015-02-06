@@ -7,6 +7,7 @@ import os
 import decimal as dc
 import sys
 import json
+import time
 
 #
 # Material Builder 
@@ -590,6 +591,43 @@ def unique2(a,labels):
 		ii += 1
 
 	return np.array(newlist), newlabels
+
+def fneigh(point,setp):
+
+        # Find of nearest neighbours of the "point" in the "setp" of points
+        # 
+        # Return array of the shape, where
+        # - 1st column is the distance of "point" to point p in "setp"
+        # - 2nd column is the index of point p in "setp"
+
+        neigh = np.zeros((len(setp),2))
+        idx = 0
+        for p in setp:
+                d = np.linalg.norm(point-p)
+                neigh[idx,0] = d
+                neigh[idx,1] = idx
+                idx += 1
+
+        # Sort the distances according to the distance
+        neigh = neigh[np.argsort(neigh[:,0])]
+
+        neigh = CleanMatElements(neigh)
+
+        return neigh
+
+def calcRuntime(tStart,tStop):
+	# Converts time between tStop and tStart (given in seconds)
+	# to minues:seconds
+	# 
+	# Outputs: list where first element is number of minutes,
+	#          second element number of seconds
+
+	delta = tStop - tStart
+
+	minutes = int(m.floor(delta/60))
+	seconds = delta%60
+	
+	return [minutes,seconds]
 
 class Surface:
 	def __init__(self,transM,positions,atoms,Midx):
@@ -1551,6 +1589,20 @@ class Interface:
 				tmplabels.append(atoms[i])
 		idx = 0
 
+                # Orient the atoms in such a way that the coorindate origin is 
+                # in the middle of the top plane
+                # Find positions of only top plane
+                idxPlane = abs(pos[:,2]) == 0.0
+                posPlane = pos[idxPlane]
+                # Find centroid of this plane
+                cX = sum(posPlane[:,0])/len(posPlane[:,0])
+                cY = sum(posPlane[:,1])/len(posPlane[:,1])
+                # The z-variable of centroid is constant
+                cZ = posPlane[0,2]
+                cXYZ = np.array((cX,cY,cZ))
+                nnXYZ = fneigh(cXYZ,posPlane)
+                originIdx = int(nnXYZ[0][1])
+
 		# Find the all the atoms that are inside the area 
 		# designated by vectors vec1 and vec2
 		# We will use barycentric coordinates to do this
@@ -1563,6 +1615,7 @@ class Interface:
 
 #		pos -= pos[0] # Does not work for large number of atoms 
 		shift = pos[0].copy()
+		shift = posPlane[originIdx].copy()
 		pos -= shift
 
 		for atom in pos:
@@ -1747,6 +1800,9 @@ class Interface:
 #					#
 #########################################
 
+#start timer
+tStart = time.time()
+
 # Read input
 subCIF, maxMillerInd, nL = readInput(inputFile)
 
@@ -1804,7 +1860,7 @@ for subMillerString in MillerList:
 
 	Sub.primitivecell()
 
-	vecsS = Superlattice(Sub.a,Sub.b,5) # multiplication of unit cells
+	vecsS = Superlattice(Sub.a,Sub.b,3) # multiplication of unit cells
 	# vecsS has set of vecors that span on the lattice. They give the same area,
 	# but the two vectors might be of different lengths. Find such a pair, for
 	# which length is similar, so we have the most "square" lattice
@@ -1865,7 +1921,12 @@ for subMillerString in MillerList:
 # nlayers? #
 	print "*****************************************"
 
-#Output staticits
+# Stop timer
+tStop = time.time()
+
+runtime = calcRuntime(tStart,tStop)
+
+#Output statistics
 nStruc = len(MillerList)
 nPrimFailed = len(primFailed)
 nNotExist = len(notExist)
@@ -1881,7 +1942,8 @@ for i in notExist:
 file.write("\nNumber of orientations where primitive vectors failed: %i\n"%nPrimFailed)
 for i in primFailed:
 	file.write("%s\n"%i)
-
+file.write("\nRuntime: %i min %i sec\n"%(runtime[0],runtime[1]))
 file.close()
+
 # End of program
 

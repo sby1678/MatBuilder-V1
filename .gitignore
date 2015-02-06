@@ -1,2 +1,4 @@
 *.in
 stats.out
+nprim*
+TIMINGS
