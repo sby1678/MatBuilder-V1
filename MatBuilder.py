@@ -309,6 +309,13 @@ def ReadCIF(filename):
 		iatlab += 1 # next atom
 
 	positions = np.dot(positions,f2cmat)
+	#TODO: check if this is always true.
+	# This is done for the cases when if CIF file the coordinates of first atom are different from 0.0 0.0 0.0
+	# Such cases prevents proper rotations on def plane, where the desired plane doesnt have z=0
+	shift = positions[0]
+	positions -= positions[0]
+	#end TODO
+
 	return MatID,f2cmat,atoms,positions,atomlabels
 
 def CmpRows(mat1,vector):
@@ -539,9 +546,18 @@ def extractSpaceGroup(symbol):
 	symbol = symbol.strip() # strip any leading spaces
 	symbol = symbol.strip("'") # strip quote signs
 	symbol = symbol.strip('"') # strip double quotes (just in case)
+
+        # In case symbol contains "_", i.e "I4_1/amd"
+        if symbol.find("_") > 0:
+                tmp = ""
+                for i in symbol:
+                        if i != "_":
+                                tmp += i
+                symbol = tmp
+
+	# In the case the symbol is given with white space, i.e. "F M -3 M"
 	symbol = symbol.split()
 	symbolOut = ""
-	# In the case the symbol is given with white space, i.e. "F M -3 M"
 	for i in symbol:
 		symbolOut += i
 	symbolOut = symbolOut.capitalize()
@@ -1818,7 +1834,7 @@ idMat,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
 # Construt big bulk material that will be reused in all calculations
 print "Construction big bulk structure... This might take time."
 bigBulk = Surface(transM,positions,atoms,np.array((0,0,0)))
-bigBulk.bulk(8)
+bigBulk.bulk(10)
 print "Bulk structure complete"
 print "********************************************************"
 print 
