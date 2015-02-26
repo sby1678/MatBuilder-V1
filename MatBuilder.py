@@ -54,13 +54,22 @@ def readInput(inputFile):
 
 	line = file.readline()
 	line = line.split()
+	useMillerList = bool(int(line[1]))
+
+	line = file.readline()
+	line = line.split()
 	maxMillerInd = int(line[1])
+
+	line = file.readline()
+	line = line.split()
+	MillerIndList = " ".join(line[1:-7])
+	MillerIndList = MillerIndList.split('|')
 
 	line = file.readline()
 	line = line.split()
 	nL = float(line[1])
 
-	return subCIF, maxMillerInd, nL
+	return subCIF, useMillerList, maxMillerInd, MillerIndList, nL
 
 def getMillerFromString(millerString):
 
@@ -1820,10 +1829,14 @@ class Interface:
 tStart = time.time()
 
 # Read input
-subCIF, maxMillerInd, nL = readInput(inputFile)
+subCIF, useMillerList, maxMillerInd, MillerIndList, nL = readInput(inputFile)
 
 # create a list of Miller indices
-MillerList=createMillerList(maxMillerInd)
+if not useMillerList:
+	MillerList = createMillerList(maxMillerInd)
+else:
+	MillerList = MillerIndList
+	print MillerList
 
 #Read CIF file
 print
@@ -1834,7 +1847,7 @@ idMat,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
 # Construt big bulk material that will be reused in all calculations
 print "Construction big bulk structure... This might take time."
 bigBulk = Surface(transM,positions,atoms,np.array((0,0,0)))
-bigBulk.bulk(10)
+bigBulk.bulk(15)
 print "Bulk structure complete"
 print "********************************************************"
 print 
@@ -1962,4 +1975,3 @@ file.write("\nRuntime: %i min %i sec\n"%(runtime[0],runtime[1]))
 file.close()
 
 # End of program
-
