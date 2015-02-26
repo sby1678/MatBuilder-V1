@@ -1321,8 +1321,8 @@ class Surface:
 		self.exists = False
 		
 		# Shift coordinates so that 1st atom is in origin
-		orgsave = self.planepos[0]
-		self.planepos -= self.planepos[0]
+		orgsave = self.planepos[0].copy()
+		self.planepos -= orgsave
 
 		# Find all the nearest neighbours from atom 0
 		distmat = np.sum(np.abs(self.planepos)**2,axis=1)**(1./2)
