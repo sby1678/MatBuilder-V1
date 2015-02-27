@@ -1355,7 +1355,7 @@ class Surface:
 			# atoms, the primitive vecors need to be defined
 			# between atoms of the same type.
 			if self.planeatms[idx[i]] == self.planeatms[0]:
-				self.a = self.planepos[idx[i]]
+				self.a = self.planepos[idx[i]].copy()
 	
 				na = np.linalg.norm(self.a)
 	
@@ -1386,7 +1386,7 @@ class Surface:
 			# atoms, the primitive vecors need to be defined
 			# between atoms of the same type.
 			if self.planeatms[idx[i]] == self.planeatms[0]:
-				self.b = self.planepos[idx[i]]
+				self.b = self.planepos[idx[i]].copy()
 	
 				nb = np.linalg.norm(self.b)
 	
