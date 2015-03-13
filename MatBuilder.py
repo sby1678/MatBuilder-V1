@@ -1372,7 +1372,7 @@ class Surface:
 				# 2nd condition
 				dau = np.dot(self.a,self.u)
 	
-				if abs(dau) == (nu**2)/2: primitive = True
+				if round(abs(dau),5) == round((nu**2)/2,5): primitive = True
 
 				if primitive: break
 			i += 1
@@ -1401,7 +1401,7 @@ class Surface:
 				# 2nd condition
 				dbv = np.dot(self.b,self.v)
 				
-				if abs(dbv) == (nv**2)/2: primitive = True
+				if round(abs(dbv),5) == round((nv**2)/2,5): primitive = True
 	
 				# Check if vector b is not linear with vector a
 				if primitive:
@@ -1847,7 +1847,7 @@ idMat,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
 # Construt big bulk material that will be reused in all calculations
 print "Construction big bulk structure... This might take time."
 bigBulk = Surface(transM,positions,atoms,np.array((0,0,0)))
-bigBulk.bulk(15)
+bigBulk.bulk(8)
 print "Bulk structure complete"
 print "********************************************************"
 print 
