@@ -80,6 +80,20 @@ def getMillerFromString(millerString):
 	
 	return out
 
+def uqLabels(labels):
+        # Find unique labels in the list
+        # Return dictionary with key=integer number, value=labels
+        out = {}
+        tmp = []
+        idx=0
+        for i in labels:
+                if i not in tmp:
+                        tmp.append(i)
+
+        for i in range(len(tmp)):
+                out[i]=tmp[i]
+
+        return out
 
 def ReadCIF(filename):
 	# Reads information from CIF file:
@@ -317,15 +331,30 @@ def ReadCIF(filename):
 				atoms.append(atomlabels[iatlab])
 		iatlab += 1 # next atom
 
+        #Convert atoms list to numpy array with atom types. Atom types will be hold in dictonary
+        # Get the dictionary
+        atomTypes = uqLabels(atoms)
+        # Convert atoms list to array
+        ii = 0
+        atomstmp = np.zeros(len(atoms))
+        for label in atoms:
+                for uqLabIdx,uqLab in atomTypes.iteritems():
+                        if label == uqLab:
+                                atomstmp[ii] = uqLabIdx
+                ii+=1
+	atoms = atomstmp
+
 	positions = np.dot(positions,f2cmat)
 	#TODO: check if this is always true.
-	# This is done for the cases when if CIF file the coordinates of first atom are different from 0.0 0.0 0.0
-	# Such cases prevents proper rotations on def plane, where the desired plane doesnt have z=0
+	# This is done for the cases when if CIF file the coordinates of 
+        # first atom are different from 0.0 0.0 0.0
+	# Such cases prevents proper rotations on def plane, where 
+        # the desired plane doesnt have z=0
 	shift = positions[0]
 	positions -= positions[0]
 	#end TODO
 
-	return MatID,f2cmat,atoms,positions,atomlabels
+	return MatID,f2cmat,atoms,positions,atomTypes
 
 def CmpRows(mat1,vector):
 
@@ -655,7 +684,7 @@ def calcRuntime(tStart,tStop):
 	return [minutes,seconds]
 
 class Surface:
-	def __init__(self,transM,positions,atoms,Midx):
+	def __init__(self,transM,positions,atoms,atomTyp,Midx):
 		self.A = transM[0] # Vector A of the unit cell
 		self.B = transM[1] # Vector B of the unit cell
 		self.C = transM[2] # Vector C of the unit cell
@@ -672,6 +701,7 @@ class Surface:
 
 		self.unitcell = self.positions.copy() # save unit cell 
 		self.unitcellatoms = atoms # save unit cell atom labels
+		self.atomTyp = atomTyp
 		self.primarea = 0 # area of the primitive cell
 		self.phiab = 0 # angle between primtive vectors
 		self.norma = 0 # norm of primitive vector a
@@ -684,6 +714,8 @@ class Surface:
 			         		 # positions and atoms below
 		self.planeatmsblk = [] # empty list for plane atom labels
 		                       # and atome below
+		self.positionsSmall = np.array([[]]) # center of bulk
+		self.positionsSmall = [] # center of bulk atoms
 		self.avecs = np.array((0,0,0)) # anticpatory vectors
 		self.nneigh = 0 # number of nearst neigbours
 		self.exists = False # flag to check if substrate exists
@@ -744,47 +776,64 @@ class Surface:
 		
 		# Initial cooridnates and labels 
 		posout = self.unitcell.copy()
-		newlabels = self.__addatoms([])
 
 		# Make unit cell periodic
 		perIDX = self.__removeperiodic3D(self.unitcell,self.A,self.B,self.C)
 		unitcellPer = self.unitcell.copy()[perIDX]
-		baseLabel = []
-		# Find atom labels for periodic unit cell
-		for i in perIDX:
-			baseLabel.append(newlabels[i])
-		newlabels = list(baseLabel)
+		unitcellatomsPer = self.unitcellatoms.copy()[perIDX]
 
-		posout = unitcellPer.copy()
-		print "DONE UNIT CELL"
+                nElems = len(r)
+                nAtoms = len(unitcellPer)
+                nElems = nElems * nElems * nElems * nAtoms
+                posout = np.zeros((nElems,3))
+                newlabels = np.zeros((nElems))
+                posout[0:nAtoms] = unitcellPer
+                newlabels[0:nAtoms] = unitcellatomsPer
 
-		for x in r:
-			for y in r:
-				for z in r:
-					if x != 0 or y!= 0 or z != 0:
-						newpos = unitcellPer \
-						           + x*self.A \
-							   + y*self.B \
-						           + z*self.C
-						posout = \
-						      np.vstack([posout,newpos])
-						labels = \
-						      self.__addatomsNEW(newlabels,baseLabel)
-#						print len(baseLabel)
-	#					newlabels += baseLabel
+                if ncells> 2:
+                        middle = len(r)/2
+                        closeR = r[middle-2:middle+3]
+                else:
+                        closeR = r
+                # Generate the middle of the bulk first. This is usefull in the later parts of the code to 
+                # limit the size of the bulk to small number of atoms, for instance to look for nearest 
+                # neighbors 
+                i = nAtoms
+                for x in closeR:
+                        for y in closeR:
+                                for z in closeR:
+                                        if x != 0 or y!= 0 or z != 0:
+                                                posout[i:nAtoms+i] = unitcellPer \
+                                                           + x*self.A \
+                                                           + y*self.B \
+                                                           + z*self.C
+                                                newlabels[i:nAtoms+i] = unitcellatomsPer
+                                                i += nAtoms
 
-		# Remove all duplicates
+                idxMiddle = i
+                # Continue with the rest of bulk
+                if ncells >2:
+                        for x in r:
+                                for y in r:
+                                        for z in r:
+                                                if x not in closeR or y not in closeR or z not in closeR:
+                                                        posout[i:nAtoms+i] = unitcellPer \
+                                                                   + x*self.A \
+                                                                   + y*self.B \
+                                                                   + z*self.C
+                                                        newlabels[i:nAtoms+i] = unitcellatomsPer
+                                                        i += nAtoms
 
-#		self.positions, self.atoms = self.__unique(posout,newlabels)
-		#self.positions,self.atoms = unique2(posout,newlabels)
-#		ii = 0
-#		for i in posout:
-#			print newlabels[ii],i[0],i[1],i[2]
-#			ii+=1
+
+		#ii = 0
+                #for i in posout:
+                #       #print newlabels[ii],i[0],i[1],i[2]
+                #       print self.atomTyp[newlabels[ii]],i[0],i[1],i[2]
+                #       ii+=1
 		self.positions = posout
 		self.atoms = newlabels
-
-
+                self.positionsSmall = posout[0:idxMiddle]
+                self.atomsSmall = newlabels[0:idxMiddle]
 
 	def bulk(self,ncells):
 		# 
@@ -1146,17 +1195,8 @@ class Surface:
 		# ones with index z = 0 , above the plane are the ones
 		# with z > 0 and below with z < 0 
 
-		idx = 0
-		for atom in posrot:
-			vec = atom - self.u
-			d = np.dot(vec,self.n)
-			d = CleanMatElements(np.array([d]))
-			if d  == 0: # atom belongs to plane
-				idxlist.append(idx)
-
-			if atom[2] < 0: # atom below the plane
-				idxlistblk.append(idx)
-			idx += 1
+		idxlist = posrot[:,2] == 0
+		idxlistblk = posrot[:,2] < 0
 		
 		if idxlist != []: self.exists = True
 
@@ -1168,9 +1208,7 @@ class Surface:
 			posabove = posrot[idxabove]
 
 			# Labels of atoms on surface only
-			self.planeatms = []
-			for i in idxlist:
-				self.planeatms.append(self.atoms[i])
+			self.planeatms = self.atoms[idxlist]
 	
 			uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.planeatms,\
 					                   posrot,idxlist)
@@ -1192,30 +1230,26 @@ class Surface:
 				ii = avecslist[i]
 				self.avecsall[lab]=ii
 	
-	
-		#	self.avecs = self.__anticipatoryvecs(posrot[idxlist[0]],\
-		#			                     posabove)
-	
-			# Find the nearest neighbours of the atom in bulk
-#			self.nneigh = self.__anticipatoryvecs(posrot[0],\
-#	   				    posrot[1:],neighonly=True)
-	
-			# Find nearest unique atoms in the whole bulk 
-			# This is needed to find nearest neigbours of each atom type
-			uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atoms,\
-					                   posrot,\
-							   idxlist=range(len(posrot)))
+#			# Find nearest unique atoms in the whole bulk 
+#			# This is needed to find nearest neigbours of each atom type
+#			uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atoms,\
+#					                   posrot,\
+#							   idxlist=range(len(posrot)))
 
-			neighlist = []
-			for i in uqidxbulk:
-				# Construct array with poistion without atom i
-				postmpa = posrot[:i]
-				postmpb = posrot[i+1:]
-				postmp  = np.concatenate((postmpa,postmpb))
-				nneighat = self.__anticipatoryvecs(posrot[i],\
-		   				    postmp,neighonly=True)
-				neighlist.append(nneighat)
-	
+                        uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atomsSmall,\
+                                                           self.positionsSmall,\
+                                                           idxlist=range(len(self.positionsSmall)))
+
+                        neighlist = []
+                        for i in uqidxbulk:
+                                # Construct array with poistion without atom i
+                                postmpa = self.positionsSmall[:i]
+                                postmpb = self.positionsSmall[i+1:]
+                                postmp  = np.concatenate((postmpa,postmpb))
+                                nneighat = self.__anticipatoryvecs(self.positionsSmall[i],\
+                                                    postmp,neighonly=True)
+                                neighlist.append(nneighat)
+
 			# Create dictionary that as a key will have label 
 			# of unique atom and as value, number of its nearest 
 			# neighbors
@@ -1238,9 +1272,7 @@ class Surface:
 			self.planeposblk = posrot[idxlistblk]
 
 			# Labels of atoms on surface and below
-			self.planeatmsblk = []
-			for i in idxlistblk:
-				self.planeatmsblk.append(self.atoms[i])
+			self.planeatmsblk = self.atoms[idxlistblk]
 	
 			# Translate plane so coordinate z=0	
 #			if abs(self.planepos[:,2]).all > 0:
@@ -1678,7 +1710,6 @@ class Interface:
 
 		self.vecSub = vecSub.copy() # vectors defining substrate surface
 
-
 		# Prepare xyz output for calculations
 		periodic = True
 		nlayers = nL
@@ -1699,7 +1730,6 @@ class Interface:
 		# - positions and labels of surface
 		# - rotated anticipatory vectors
 		# - rotated vectors
-		
 		# list of indexes of atom belonging to the plane
 		idxlist = []
 		planeatms = []
@@ -1711,10 +1741,7 @@ class Interface:
 		pos = pos[iidx]
 
 		# Generate atom labels for limited positions
-		tmplabels = []
-		for i in range(len(iidx)):
-			if iidx[i]:
-				tmplabels.append(atoms[i])
+		tmplabels = atoms[iidx]
 		idx = 0
 
                 # Orient the atoms in such a way that the coorindate origin is 
@@ -1785,8 +1812,7 @@ class Interface:
 		planepos = pos[idxlist]
 
 		# and corresponind atom labels
-		for i in idxlist:
-			planeatms.append(tmplabels[i])
+		planeatms = tmplabels[idxlist]
 
 #		ii=0
 #		for i in planepos:
@@ -1836,11 +1862,7 @@ class Interface:
 		# Find only unique atoms
 			uniqueidx = self.__removeperiodic(planepos,vec1r,vec2r)
 			planepos = planepos[uniqueidx]
-			tmpatm = []
-	
-			for i in uniqueidx:
-				tmpatm.append(planeatms[i])
-			planeatms = tmpatm
+			planeatms = planeatms[uniqueidx]
 
 		# Shift coordinates so they are above 0.0, 0.0, plane
 		minZ = min(planepos[:,2])
@@ -1945,11 +1967,11 @@ else:
 print
 print "********************************************************"
 print "Reading structure from .cif file"
-idMat,transM,atoms,positions,atomtyp=ReadCIF(subCIF)
+idMat,transM,atoms,positions,atomTyp=ReadCIF(subCIF)
 
 # Construt big bulk material that will be reused in all calculations
 print "Construction big bulk structure... This might take time."
-bigBulk = Surface(transM,positions,atoms,np.array((0,0,0)))
+bigBulk = Surface(transM,positions,atoms,atomTyp,np.array((0,0,0)))
 bigBulk.bulkNEW(8)
 print "Bulk structure complete"
 print "********************************************************"
@@ -1968,10 +1990,12 @@ for subMillerString in MillerList:
 	Miller = getMillerFromString(subMillerString)
 	#nbulk = max(Miller)*2 # use the max Miller index to ensure non-empty surface
 
-	Sub = Surface(transM,positions,atoms,Miller)
+	Sub = Surface(transM,positions,atoms,atomTyp,Miller)
 #	Sub.bulk(nbulk)
 	Sub.positions = bigBulk.positions.copy()
-	Sub.atoms = bigBulk.atoms
+	Sub.atoms = bigBulk.atoms.copy()
+	Sub.positionsSmall = bigBulk.positionsSmall.copy()
+	Sub.atomsSmall = bigBulk.atomsSmall.copy()
 
 	Sub.construct()
 	Sub.plane()
@@ -2045,7 +2069,7 @@ for subMillerString in MillerList:
 	file.write("lattice_vector   %12.6f   %12.6f   %12.6f\n"%(0.0, 0.0, nL))
 	ii = 0
 	for i in iface.SSurfPos:
-		file.write("atom %12.6f  %12.6f  %12.6f  %5s\n"%(i[0],i[1],i[2],iface.SSurfAtm[ii]))
+		file.write("atom %12.6f  %12.6f  %12.6f  %5s\n"%(i[0],i[1],i[2],atomTyp[iface.SSurfAtm[ii]]))
 		ii+= 1
 	file.close()
 	# end of the loop on Miller indices 
