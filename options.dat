@@ -1,5 +1,5 @@
-substrate     SiO2.cif      # CIF file for Substrate
-usingMillerList?     1
+substrate     Si-opt.cif      # CIF file for Substrate
+usingMillerList?     0
 maxMillerInd     4         # Maximal miller index for all three dimesions
 MillerIndList     1 1 1|1 0 1   # Miller Indices you wish to proceed 
 nLayer        18.5        # Thickness of Deposit/Substrate slabs [A]

@@ -1195,8 +1195,10 @@ class Surface:
 		# ones with index z = 0 , above the plane are the ones
 		# with z > 0 and below with z < 0 
 
-		idxlist = posrot[:,2] == 0
-		idxlistblk = posrot[:,2] < 0
+		idxlistBOOL = posrot[:,2] == 0
+		idxlist = np.where(idxlistBOOL == 1)[0]
+		idxlistblkBOOL = posrot[:,2] < 0
+		idxlistblk = np.where(idxlistblkBOOL == 1)[0]
 		
 		if idxlist != []: self.exists = True
 
@@ -1212,7 +1214,7 @@ class Surface:
 	
 			uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.planeatms,\
 					                   posrot,idxlist)
-		
+				
 			# Find anticipatory vectors for each unique atom on the plane
 			avecslist = []
 			for idx in uqidxbulk:
@@ -1235,7 +1237,6 @@ class Surface:
 #			uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atoms,\
 #					                   posrot,\
 #							   idxlist=range(len(posrot)))
-
                         uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atomsSmall,\
                                                            self.positionsSmall,\
                                                            idxlist=range(len(self.positionsSmall)))
@@ -1268,7 +1269,8 @@ class Surface:
 			
 			# Create surace coordiantes including atoms below it
 			# Make sure that surface atoms are first in the array
-			idxlistblk = idxlist + idxlistblk
+			#idxlistblk = idxlist + idxlistblk
+			idxlistblk = np.concatenate((idxlist,idxlistblk))
 			self.planeposblk = posrot[idxlistblk]
 
 			# Labels of atoms on surface and below
