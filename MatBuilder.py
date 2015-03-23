@@ -80,22 +80,32 @@ def getMillerFromString(millerString):
 	
 	return out
 
-def uqLabels(labels):
+def uqLabels(labels,types):
         # Find unique labels in the list
         # Return dictionary with key=integer number, value=labels
-        out = {}
         tmp = []
-        idx=0
+	# Get all the unique atoms
         for i in labels:
                 if i not in tmp:
                         tmp.append(i)
 
-        for i in range(len(tmp)):
-                out[i]=tmp[i]
+	# Get all the atoms that are in dictionary to the list
+	vals = types.values()
 
-        return out
+	nextIdx = 0
+	if types != {}:
+		maxTyp = max(types)
+		nextIdx = maxTyp + 1
 
-def ReadCIF(filename):
+	# Put the atoms to the dictionary
+	for i in tmp:
+		if i not in vals:
+			types[nextIdx] = i
+			nextIdx += 1
+
+        return types
+
+def ReadCIF(filename,atomTypes):
 	# Reads information from CIF file:
 	# - ICSD database code for the material
 	# - unit cell lengths and angles
@@ -111,6 +121,10 @@ def ReadCIF(filename):
 
 	lines = file.readlines()
 	file.close()
+
+	# Strip whitespaces and line endings
+	for i in range(len(lines)):
+		lines[i]=lines[i].strip()
 
 	for line in lines:
 		if line.find("data") >= 0:
@@ -156,20 +170,38 @@ def ReadCIF(filename):
 
 	# READ ATOM FRACTIONAL COORDINATES
 	# Find index of the the beginning of atom fractional coordinates
+	# Find either _atom_site_label or _atom_site_symbol and see what is first
+	# Set the ib to the fist one
 	try:
-		# Unix line ending
-		ib = lines.index("_atom_site_occupancy\n")
+		ibL = lines.index("_atom_site_label")
 	except ValueError:
-		# Windows line ending
-		ib = lines.index("_atom_site_occupancy\r\n")
+		ibL = 100000 # Just put big unresonable value
 
-	# Sometimes in happens in cif (usually from ISCD) that after 
-	# _atom_site_occupancy line there is _atom_site_attached_hydrogens
-	# lable. Remove it.
-	if (lines[ib+1] == ("_atom_site_attached_hydrogens\n")) or \
-           (lines[ib+1] == ("_atom_site_attached_hydrogens\r\n")):
-		   ib = ib + 1
-		
+	try:
+		ibS = lines.index("_atom_site_type_symbol")
+	except ValueError:
+		ibS = 100000 # Just put big unresonable value
+
+	# Find where is the begining of atom definition loop in CIF file.
+	if ibL < ibS:
+		ib = ibL
+	else:
+		ib = ibS
+
+	allLabelsRead = False
+	ibSave = ib
+	while not allLabelsRead:
+		ib += 1
+		if lines[ib][0] == "_":
+			if lines[ib][0:18] == "_atom_site_fract_x":
+				xPos = ib - ibSave
+			if lines[ib][0:18] == "_atom_site_fract_y":
+				yPos = ib - ibSave
+			if lines[ib][0:18] == "_atom_site_fract_z":
+				zPos = ib - ibSave
+		else:
+			allLabelsRead = True
+
 	# Get atom positions
 	# We don't know how many atoms ther is the structure
 	# Read them unitl keyworld "loop", or line begining with "_"
@@ -178,9 +210,15 @@ def ReadCIF(filename):
 	frapos = []
 	while 1:
 		try:
-			line = lines[ib+1]
+			line = lines[ib]
 		except IndexError:
 			break # end of file reached 
+
+		# If file finishes with empty line
+		try:
+			test = line[0]
+		except IndexError:
+			break
 
 		if (line[0:4] != "loop") and (line[0] != "_") \
 		   and (line[0] != "#"):
@@ -198,28 +236,20 @@ def ReadCIF(filename):
 	ii = 0 #index
 	for atom in frapos:
 		atom = atom.split()
-		symbol = atom[0][:-1]
-		# Sometimes lines in the cif file has the format:
-		# "Si1 Si0+ 8 a 0. 0. 0. 0.54(1) 1. 0"
-		# sometimes:
-		# "Ta1      2 a   0.00000   0.00000   0.00000 1.0"
-		# Discover which one it is by checking if the second
-		# element is equal to the first
-		testElem = atom[1]
-		if atom[1][:-2] == symbol:
-			atomIndex = 4
-		else:
-			atomIndex = 3
-		x = float(CheckParentheses(atom[atomIndex]))
-		y = float(CheckParentheses(atom[atomIndex+1]))
-		z = float(CheckParentheses(atom[atomIndex+2]))
+		symbol = atom[0]
+		# Strip the digits from the symbol name:
+		if symbol[-1].isdigit():
+			symbol = symbol[0:-1]
+
+		x = float(CheckParentheses(atom[xPos]))
+		y = float(CheckParentheses(atom[yPos]))
+		z = float(CheckParentheses(atom[zPos]))
 
 		fracoord[ii,0] = x
 		fracoord[ii,1] = y
 		fracoord[ii,2] = z
 		atomlabels.append(symbol)
 		ii = ii+1
-	
 	# Create array with fractional coordinates based on
 	# symmetry positions for each atom type
 #	positions = np.zeros((len(fracoord)*len(atompos),3))
@@ -333,7 +363,7 @@ def ReadCIF(filename):
 
         #Convert atoms list to numpy array with atom types. Atom types will be hold in dictonary
         # Get the dictionary
-        atomTypes = uqLabels(atoms)
+        atomTypes = uqLabels(atoms,atomTypes)
         # Convert atoms list to array
         ii = 0
         atomstmp = np.zeros(len(atoms))
@@ -342,20 +372,16 @@ def ReadCIF(filename):
                         if label == uqLab:
                                 atomstmp[ii] = uqLabIdx
                 ii+=1
-	atoms = atomstmp
+        atoms = atomstmp
 
 	positions = np.dot(positions,f2cmat)
 	#TODO: check if this is always true.
-	# This is done for the cases when if CIF file the coordinates of 
-        # first atom are different from 0.0 0.0 0.0
-	# Such cases prevents proper rotations on def plane, where 
-        # the desired plane doesnt have z=0
-	shift = positions[0]
-	positions -= positions[0]
+	# This is done for the cases when if CIF file the coordinates of first atom are different from 0.0 0.0 0.0
+	# Such cases prevents proper rotations on def plane, where the desired plane doesnt have z=0
+	shift = positions[0].copy()
+	positions -= shift
 	#end TODO
-
 	return MatID,f2cmat,atoms,positions,atomTypes
-
 def CmpRows(mat1,vector):
 
 	diff = True
@@ -1954,7 +1980,7 @@ class Interface:
 
 #start timer
 tStart = time.time()
-
+atomTyp = {}
 # Read input
 subCIF, useMillerList, maxMillerInd, MillerIndList, nL = readInput(inputFile)
 
@@ -1969,7 +1995,7 @@ else:
 print
 print "********************************************************"
 print "Reading structure from .cif file"
-idMat,transM,atoms,positions,atomTyp=ReadCIF(subCIF)
+idMat,transM,atoms,positions,atomTyp=ReadCIF(subCIF,atomTyp)
 
 # Construt big bulk material that will be reused in all calculations
 print "Construction big bulk structure... This might take time."
