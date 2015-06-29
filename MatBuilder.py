@@ -1591,6 +1591,145 @@ class Surface:
 		# Shift coordinates back to orginals positions 
 		self.planepos += orgsave
 
+	def initpvecNEW2(self):
+		# Initialize primitive vecotrs
+		# Algorithm:
+		# Take first atom in the surface, calculate its nearest 
+		# neighbours, and define primitive vectors as the 
+		# vectors pointing to the nearest two atoms. 
+
+		# Algortihm used:
+		# Check two conditions:
+		# 1) If lattice constant for given plane can be expresed 
+		#    in term of intiger multiplications of primitive vector:
+		#        n*|a| = |u| , n=1,2,3,....
+		# 2) If length of the scalar projection of the primitive 
+		#    vector on the lattice vector is equal to 0.5*(|u|**2)
+		#    This can be shown from the properties of dot product:
+		#   dot(a,u) == 0.5*(|u|**2) when a_u = |a|*cos(phi) == 0.5*|u|
+		#
+		#   If any of those conditions is met, the pair of vectors 
+		#   are the primitive vectors for this lattice
+
+		# Primitive vectors not found yet
+		self.exists = False
+
+		# Shift coordinates so that 1st atom is in origin
+		orgsave = self.planepos[0].copy()
+		self.planepos -= orgsave
+
+		# Find all the nearest neighbours from atom 0
+		distmat = np.sum(np.abs(self.planepos)**2,axis=1)**(1./2)
+		# Sort distmat. 
+		idx = distmat.argsort()
+
+		# Find two non-linear vectors. They will be initial 
+		# primitive vectors
+		# It is most likely to be fist two smallest vectors,
+		# but check for linearity just in case
+
+		nu = np.linalg.norm(self.u)
+		nv = np.linalg.norm(self.v)
+
+		primitive = False
+
+		# Search for 1st primitive vector
+		i = 1
+		while i < len(distmat):
+			# In the case of crystals containig different
+			# atoms, the primitive vecors need to be defined
+			# between atoms of the same type.
+			if self.planeatms[idx[i]] == self.planeatms[0]:
+				self.a = self.planepos[idx[i]].copy()
+	
+				na = np.linalg.norm(self.a)
+	
+				# 1st condtition
+				if nu >= na:
+					ma = nu%na
+				else:
+					ma = na%nu
+	
+				if round(ma,6) == 0.0: primitive = True
+	
+		#		# 2nd condition
+		#		dau = np.dot(self.a,self.u)
+		#		print "2nd condition:",round(abs(dau),5),round((nu**2)/2,5)
+		#		if round(abs(dau),5) == round((nu**2)/2,5): primitive = True
+
+				# 3rd condition u and a are colinear
+				check = np.cross(self.a,self.u)
+				# Clean numeric noise
+				check = CleanMatElements(check)
+				cosphi = np.dot(self.a,self.u)/\
+					       (na*nu)
+				if np.linalg.norm(check) == 0:
+					primitive = True
+
+
+				if primitive: break
+			i += 1
+		# Search for 2nd primitive vector
+		linear = True
+		primitive = False
+		i = 1
+		while i < len(distmat):
+			# In the case of crystals containig different
+			# atoms, the primitive vecors need to be defined
+			# between atoms of the same type.
+			if self.planeatms[idx[i]] == self.planeatms[0]:
+				self.b = self.planepos[idx[i]].copy()
+	
+				nb = np.linalg.norm(self.b)
+	
+				# 1st condtition
+				if nv >= nb:
+					mb = nv%nb
+				else:
+					mb = nb%nv
+	
+				if round(mb,6) == 0.0 : primitive = True
+	
+				# 2nd condition
+		#		dbv = np.dot(self.b,self.v)
+		#		
+		#		if round(abs(dbv),5) == round((nv**2)/2,5): primitive = True
+		#
+				# 3rd condition u and a are colinear
+				check = np.cross(self.b,self.v)
+				# Clean numeric noise
+				check = CleanMatElements(check)
+				cosphi = np.dot(self.b,self.v)/\
+					       (nb*nv)
+				if np.linalg.norm(check) == 0:
+					primitive = True
+
+				# Check if vector b is not linear with vector a
+				if primitive:
+					check = np.cross(self.a,self.b)
+					# Clean numeric noise
+					check = CleanMatElements(check)
+					self.norma=np.linalg.norm(self.a)
+					self.normb=np.linalg.norm(self.b)
+					cosphi = np.dot(self.a,self.b)/\
+						       (self.norma*self.normb)
+					if np.linalg.norm(check) != 0:
+						linear = False
+	
+				if primitive and (not linear): break
+
+			i += 1
+		
+		if primitive:
+			self.exists = True
+
+			# Reduce a and b
+			self.a, self.b = reduction(self.a, self.b)
+
+		# Shift coordinates back to orginals positions 
+		self.planepos += orgsave
+
+
 	def primitivecell(self):
 		# Calculate the norm of primitive vectors a,b , 
 		# angle between them and the area of primitive cell
@@ -2000,7 +2139,7 @@ idMat,transM,atoms,positions,atomTyp=ReadCIF(subCIF,atomTyp)
 # Construt big bulk material that will be reused in all calculations
 print "Construction big bulk structure... This might take time."
 bigBulk = Surface(transM,positions,atoms,atomTyp,np.array((0,0,0)))
-bigBulk.bulkNEW(8)
+bigBulk.bulkNEW(40)
 print "Bulk structure complete"
 print "********************************************************"
 print 
@@ -2034,7 +2173,7 @@ for subMillerString in MillerList:
 		notExist.append(subMillerString)
 		continue # if given plane does not exists, continue to next one
 
-	Sub.initpvecNEW()
+	Sub.initpvecNEW2()
 	if not Sub.exists: 
 		print "!!! Failed to find primitive vectors !!!"
 		print "!!! Proceeding to next orientation  !!!"
@@ -2044,7 +2183,7 @@ for subMillerString in MillerList:
 
 	Sub.primitivecell()
 
-	vecsS = Superlattice(Sub.a,Sub.b,3) # multiplication of unit cells
+	vecsS = Superlattice(Sub.a,Sub.b,1) # multiplication of unit cells
 	# vecsS has set of vecors that span on the lattice. They give the same area,
 	# but the two vectors might be of different lengths. Find such a pair, for
 	# which length is similar, so we have the most "square" lattice
