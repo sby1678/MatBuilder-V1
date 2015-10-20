@@ -2032,8 +2032,12 @@ class Interface:
 			planeatms = planeatms[uniqueidx]
 
 		# Shift coordinates so they are above 0.0, 0.0, plane
-		minZ = min(planepos[:,2])
-		planepos[:,2] -= minZ
+		#minZ = min(planepos[:,2])
+		#planepos[:,2] -= minZ
+		# The cell is starts and 0.0, 0.0,0.0 and goes below.
+		# Flib it so that the bottom surface is at the top, 
+		# and other surface stays the same
+		planepos[:,2] *= -1
 
 		return planepos, planeatms, [vec1r,vec2r]
 
