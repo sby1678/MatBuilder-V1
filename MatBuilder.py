@@ -23,8 +23,8 @@ if len(sys.argv) <=1:
 inputFile = sys.argv[1]
 
 def createMillerList(maxMillerInd):
-	 # create a list that contains strings for all the possible Miller indices
-	 # from "0 0 1" to "maxMillerInd maxMillerInd maxMillerInd"
+# create a list that contains strings for all the possible Miller indices
+# from "0 0 1" to "maxMillerInd maxMillerInd maxMillerInd"
 
 	MillerList=list() 
 	x1=0
@@ -69,7 +69,11 @@ def readInput(inputFile):
 	line = line.split()
 	nL = float(line[1])
 
-	return subCIF, useMillerList, maxMillerInd, MillerIndList, nL
+	line = file.readline()
+	line = line.split()
+	checkPolarity = bool(line[1])
+
+	return subCIF, useMillerList, maxMillerInd, MillerIndList, nL, checkPolarity
 
 def getMillerFromString(millerString):
 
@@ -81,41 +85,41 @@ def getMillerFromString(millerString):
 	return out
 
 def uqLabels(labels,types):
-        # Find unique labels in the list
-        # Return dictionary with key=integer number, value=labels
-        tmp = []
+# Find unique labels in the list
+# Return dictionary with key=integer number, value=labels
+    tmp = []
 	# Get all the unique atoms
-        for i in labels:
+    for i in labels:
                 if i not in tmp:
                         tmp.append(i)
 
 	# Get all the atoms that are in dictionary to the list
-	vals = types.values()
+    vals = types.values()
 
-	nextIdx = 0
-	if types != {}:
-		maxTyp = max(types)
-		nextIdx = maxTyp + 1
+    nextIdx = 0
+    if types != {}:
+        maxTyp = max(types)
+        nextIdx = maxTyp + 1
 
-	# Put the atoms to the dictionary
-	for i in tmp:
-		if i not in vals:
-			types[nextIdx] = i
-			nextIdx += 1
+    # Put the atoms to the dictionary
+    for i in tmp:
+        if i not in vals:
+            types[nextIdx] = i
+            nextIdx += 1
 
         return types
 
 def ReadCIF(filename,atomTypes):
-	# Reads information from CIF file:
-	# - ICSD database code for the material
-	# - unit cell lengths and angles
-	# - evaluates xyz coordinates based on fractional coordinates and 
-	# symmetry position of unique atoms
-	# Returns:
-	# - ICSD database code for the material
-	# - unit cell lengths and angles
-	# - list with atom labels
-	# - array with xyz coordinates
+# Reads information from CIF file:
+# - ICSD database code for the material
+# - unit cell lengths and angles
+# - evaluates xyz coordinates based on fractional coordinates and 
+# symmetry position of unique atoms
+# Returns:
+# - ICSD database code for the material
+# - unit cell lengths and angles
+# - list with atom labels
+# - array with xyz coordinates
 
 	file = open(filename,'r')
 
@@ -252,7 +256,7 @@ def ReadCIF(filename,atomTypes):
 		ii = ii+1
 	# Create array with fractional coordinates based on
 	# symmetry positions for each atom type
-#	positions = np.zeros((len(fracoord)*len(atompos),3))
+	# positions = np.zeros((len(fracoord)*len(atompos),3))
 
 	iatlab = 0 # index of symmetry unique atom
 	atoms = []# list to be fileld with atom indexes after symmetry operation
@@ -261,10 +265,10 @@ def ReadCIF(filename,atomTypes):
 		for pos in atompos: #For each element in atompos, convert it 
 			            # to fraction, multiply by fractional 
 				    # coordinate and save to positions array
-#			pos = pos.split()
+	#		pos = pos.split()
 			pos = pos.split(",") # For group
 			coordtmp = []
-#			for elem in pos[1:]:
+	#		for elem in pos[1:]:
 			for elem in pos:     # For group
 				# Read symmetry operation and constuct 
 				# fractional coordiante
@@ -279,9 +283,9 @@ def ReadCIF(filename,atomTypes):
 				# Normalise to [0,1)
 				if coord < 0 : coord = 1+coord 
 				if coord > 1 : coord = coord-1
-# WARNING
+    #WARNING
 				# Round to 4 digits to avoid rounding error
-# END WARNING
+	#END WARNING
 				coord = round(coord,3)
 				coordtmp.append(coord)
 			#Find duplicates	
@@ -382,6 +386,7 @@ def ReadCIF(filename,atomTypes):
 	positions -= shift
 	#end TODO
 	return MatID,f2cmat,atoms,positions,atomTypes
+
 def CmpRows(mat1,vector):
 
 	diff = True
@@ -391,8 +396,8 @@ def CmpRows(mat1,vector):
 	return diff
 
 def FracToCart(a,b,c,alpha,beta,gamma):
-	# Calculate transformation matrix to transform fractional coordinates
-	# to cartesian
+# Calculate transformation matrix to transform fractional coordinates
+# to cartesian
 
 	# Degrees to radians
 
@@ -438,14 +443,13 @@ def FracToCart(a,b,c,alpha,beta,gamma):
 	return mat
 
 def CleanMatElements(mat):
-
-	# Clean numeric mess in numpy array, by replacing really small 
-	# elements with 0
-	# For instance:
-	# input
-	# [  0.00000000e+00   5.43053000e+00   3.32524059e-16] 
-	# output
-	# [  0.0   5.43053   0.0]
+# Clean numeric mess in numpy array, by replacing really small 
+# elements with 0
+# For instance:
+# input
+# [  0.00000000e+00   5.43053000e+00   3.32524059e-16] 
+# output
+# [  0.0   5.43053   0.0]
 
 	small =  abs(mat) < 1e-12
 	mat[small] = 0.0
@@ -453,12 +457,12 @@ def CleanMatElements(mat):
 	return mat
 
 def ReadSym(string):
-	# Reads the _symmetry_equiv_pos_as_xyz operation in CIF 
-	# Assumes that general format is:
-	# 'x+y+z+int1/int2'
-	# Example: for 'x-y+1/2' it can be written in form of lists:
-	# operation=[1,1,0,0.5]  x=1, y=1, z=0, frac=0.5
-	# signs=[1,-1,1,1]   +x -y +z +fraction
+# Reads the _symmetry_equiv_pos_as_xyz operation in CIF 
+# Assumes that general format is:
+# 'x+y+z+int1/int2'
+# Example: for 'x-y+1/2' it can be written in form of lists:
+# operation=[1,1,0,0.5]  x=1, y=1, z=0, frac=0.5
+# signs=[1,-1,1,1]   +x -y +z +fraction
 
 	operation = [0,0,0,0]
 	# operation[0]  -  1 if there is x symmetry operation, 0 otherwise
@@ -514,28 +518,28 @@ def ReadSym(string):
 	return signs,operation
 
 def ReadSymFrac(string):
-	# This is specyfic routine for CIF file, to transform symmetry 
-	# equivalent position to actual true numbers.
-	# Works for the cases when the symmetry operation is of the forms:
-	# "x", "-x", "x+1/2", "-z+3/4"...
+# This is specyfic routine for CIF file, to transform symmetry 
+# equivalent position to actual true numbers.
+# Works for the cases when the symmetry operation is of the forms:
+# "x", "-x", "x+1/2", "-z+3/4"...
 
-	# There can be only two operation op1*x+op2*ratio, where 
-	# op1 and op2 = "+" or "-". Define op list as two "+" operations
-	# 
-	# Input:
-	# - string - symmetry operation as from CIF file, eg. "x+1/2"
-	# Output:
-	# - coordid - number for coordinate in symmetry operation: 
-	#             'x'=0, 'y'=1, 'z'=2
-	# - op - signs in symmetry operation, e.g:
-	#        "x+1/2" : op=[1,1]
-	#        "-x+1/2": op=[-1,1]
-	# 	 "-x-1/2": op=[-1,-1] 
-	#        "-x"    : op=[-1,1] ....
-	# - digits - the digits in the fraction, e.g.:
-	#        "1/4" : digits=[1,4]
-	#
-	# Author: Jakub Kaminski, UCLA, 04/2013
+# There can be only two operation op1*x+op2*ratio, where 
+# op1 and op2 = "+" or "-". Define op list as two "+" operations
+# 
+# Input:
+# - string - symmetry operation as from CIF file, eg. "x+1/2"
+# Output:
+# - coordid - number for coordinate in symmetry operation: 
+#             'x'=0, 'y'=1, 'z'=2
+# - op - signs in symmetry operation, e.g:
+#        "x+1/2" : op=[1,1]
+#        "-x+1/2": op=[-1,1]
+# 	 "-x-1/2": op=[-1,-1] 
+#        "-x"    : op=[-1,1] ....
+# - digits - the digits in the fraction, e.g.:
+#        "1/4" : digits=[1,4]
+#
+# Author: Jakub Kaminski, UCLA, 04/2013
 
 
 	op = [1,1]
@@ -582,21 +586,19 @@ def ReadSymFrac(string):
 	
 	return coordid, op, digits
 
-
 def CheckParentheses(input):
-	# In some CIF file the cell dimensions and anglesare given with 
-	# standard deviation in final digits. It is usally the last 
-	# number given in parentheses. 
+# In some CIF file the cell dimensions and anglesare given with 
+# standard deviation in final digits. It is usally the last 
+# number given in parentheses. 
 
-	# CheckParentheses checks is string read from CIF has paretheses and 
-	# disregards them.
-	#
-	# Variables:
-	# input is as string
-	# Returns float
-	#
-	# Author: Jakub Kaminski, UCLA, 04/2013
-
+# CheckParentheses checks is string read from CIF has paretheses and 
+# disregards them.
+#
+# Variables:
+# input is as string
+# Returns float
+#
+# Author: Jakub Kaminski, UCLA, 04/2013
 	i = input.find("(")
 
 	if i> -1: # found
@@ -605,7 +607,7 @@ def CheckParentheses(input):
 	return float(input)
 
 def extractSpaceGroup(symbol):
-	# Extract spacegroup symbol from CIF file line
+# Extract spacegroup symbol from CIF file line
 	symbol = symbol.strip("_symmetry_space_group_name_H-M")
 	symbol = symbol.strip() # strip any leading spaces
 	symbol = symbol.strip("'") # strip quote signs
@@ -653,9 +655,9 @@ def extractSpaceGroup(symbol):
 	return symbolOut
 
 def unique2(a,labels):
-	# Remove duplicate elements from array keeping it order
-	# Not the fastest but will do for now
-	# 3.5s to sort 13122 elements array
+# Remove duplicate elements from array keeping it order
+# Not the fastest but will do for now
+# 3.5s to sort 13122 elements array
 
 	dups = set()
 
@@ -673,12 +675,11 @@ def unique2(a,labels):
 	return np.array(newlist), newlabels
 
 def fneigh(point,setp):
-
-        # Find of nearest neighbours of the "point" in the "setp" of points
-        # 
-        # Return array of the shape, where
-        # - 1st column is the distance of "point" to point p in "setp"
-        # - 2nd column is the index of point p in "setp"
+# Find of nearest neighbours of the "point" in the "setp" of points
+# 
+# Return array of the shape, where
+# - 1st column is the distance of "point" to point p in "setp"
+# - 2nd column is the index of point p in "setp"
 
         neigh = np.zeros((len(setp),2))
         idx = 0
@@ -747,12 +748,11 @@ class Surface:
 		self.exists = False # flag to check if substrate exists
 
 	def __removeperiodic3D(self,pos,vec1,vec2,vec3):
+	# Find the atoms in the superlattice that are
+	# translations of the other atoms 
 
-		# Find the atoms in the superlattice that are
-		# translations of the other atoms 
-
-		# Rude and not effecient solution 
-		# Try more through array interception
+	# Rude and not effecient solution 
+	# Try more through array interception
 
 		r = range(2)
 		uniqlist=[]
@@ -789,14 +789,14 @@ class Surface:
 
 
 	def bulkNEW(self,ncells):
-		# 
-		# OLD ROUTINE TO CONSTRUCT BULK MATERIAL USING 
-		# __UNIQUE ROUTINE TO FIND DUPLICATE ELEMENTS.
-		# THE PROBLEM WAS THAT IT DID NOT KEEP THE ORDER 
-		# OF THE POSITION ARRAY
-		# Consruct bulk surface from "ncells x unit cell"
-		#
-		# The results is saved in the positions variable
+	# 
+	# OLD ROUTINE TO CONSTRUCT BULK MATERIAL USING 
+	# __UNIQUE ROUTINE TO FIND DUPLICATE ELEMENTS.
+	# THE PROBLEM WAS THAT IT DID NOT KEEP THE ORDER 
+	# OF THE POSITION ARRAY
+	# Consruct bulk surface from "ncells x unit cell"
+	#
+	# The results is saved in the positions variable
 
 		r = range(-ncells,ncells+1)
 		
@@ -862,14 +862,14 @@ class Surface:
                 self.atomsSmall = newlabels[0:idxMiddle]
 
 	def bulk(self,ncells):
-		# 
-		# OLD ROUTINE TO CONSTRUCT BULK MATERIAL USING 
-		# __UNIQUE ROUTINE TO FIND DUPLICATE ELEMENTS.
-		# THE PROBLEM WAS THAT IT DID NOT KEEP THE ORDER 
-		# OF THE POSITION ARRAY
-		# Consruct bulk surface from "ncells x unit cell"
-		#
-		# The results is saved in the positions variable
+	# 
+	# OLD ROUTINE TO CONSTRUCT BULK MATERIAL USING 
+	# __UNIQUE ROUTINE TO FIND DUPLICATE ELEMENTS.
+	# THE PROBLEM WAS THAT IT DID NOT KEEP THE ORDER 
+	# OF THE POSITION ARRAY
+	# Consruct bulk surface from "ncells x unit cell"
+	#
+	# The results is saved in the positions variable
 
 		r = range(-ncells,ncells+1)
 		
@@ -893,14 +893,14 @@ class Surface:
 
 		# Remove all duplicates
 
-#		self.positions, self.atoms = self.__unique(posout,newlabels)
+		# self.positions, self.atoms = self.__unique(posout,newlabels)
 		self.positions,self.atoms = unique2(posout,newlabels)
 
 	def bulkNAIVE(self,ncells):
-		#
-		# Consruct bulk surface from "ncells x unit cell"
-		#
-		# The results is saved in the positions variable
+	#
+	# Consruct bulk surface from "ncells x unit cell"
+	#
+	# The results is saved in the positions variable
 
 		r = range(-ncells,ncells+1)
 		
@@ -926,24 +926,23 @@ class Surface:
 		self.atoms = newlabels
 		
 	def __addatoms(self, newlabels):
-		# Add unit cell atoms labels to atom label list
+	# Add unit cell atoms labels to atom label list
 		for i in range(len(self.unitcellatoms)):
 			newlabels.append(self.unitcellatoms[i])
 		return newlabels
 
 	def __addatomsNEW(self, nl,base):
-		# Add unit cell atoms labels to atom label list
+	# Add unit cell atoms labels to atom label list
 		for i in range(len(base)):
 			nl.append(base[i])
 		return nl
 
 	def __uniqueNAIVE(self,newmat,oldmat,labels):
-
-		# VERY NAIVE WAY OF FINDING DUPLICATE ROWS IN ARRAY
-		# MEMORY AND CPU TIME INEFFECIENT
-		# HAS THE ADVANTAGE OF KEEPING THE ORDER
-		# WILL WORK FOR NOW, BUT FIND BETTER WAY ASAP
-		# 42s to sort 13122 elements array
+	# VERY NAIVE WAY OF FINDING DUPLICATE ROWS IN ARRAY
+	# MEMORY AND CPU TIME INEFFECIENT
+	# HAS THE ADVANTAGE OF KEEPING THE ORDER
+	# WILL WORK FOR NOW, BUT FIND BETTER WAY ASAP
+	# 42s to sort 13122 elements array
 
 		out = oldmat.copy()
 		#duplicate = False
@@ -968,17 +967,15 @@ class Surface:
 		return out,labels
 
 	def __unique(self,a,labels):
-
-		# Check the numpy array with coordiantes for duplicate entries
-		# Remove duplicates, remove lables correspoding to duplicated 
-		# coordinates. 
-		# The returned coordiantes are sorted in different order than 
-		# orginals
-		#
-		# Subroutine take from:
-		# http://stackoverflow.com/questions/8560440/removing-duplicate-columns-and-rows-from-a-numpy-2d-array
-
-		# 0.5s to sort 13122 elements array
+	# Check the numpy array with coordiantes for duplicate entries
+	# Remove duplicates, remove lables correspoding to duplicated 
+	# coordinates. 
+	# The returned coordiantes are sorted in different order than 
+	# orginals
+	#
+	# Subroutine take from:
+	# http://stackoverflow.com/questions/8560440/removing-duplicate-columns-and-rows-from-a-numpy-2d-array
+	# 0.5s to sort 13122 elements array
 
 		order = np.lexsort(a.T)
 		a = a[order]
@@ -1091,8 +1088,8 @@ class Surface:
 		elif h != 0 and k != 0 and l != 0:
 			# (hkl) surface
 
-#			self.u = (1.0/gcd_hk) * (k*self.A - h*self.B)
-#			self.v = (1.0/gcd_hl) * (l*self.A - h*self.C)
+			#self.u = (1.0/gcd_hk) * (k*self.A - h*self.B)
+			#self.v = (1.0/gcd_hl) * (l*self.A - h*self.C)
 
 			# The equivalent planes
 			# (-1-1-1)=(111)
@@ -1113,8 +1110,8 @@ class Surface:
 			gcd_hk = fractions.gcd(abs(h),abs(k))
 			gcd_hl = fractions.gcd(abs(h),abs(l))
 
-#			self.u = (1.0/gcd_hk) * (h*self.A - k*self.B)
-#			self.v = (1.0/gcd_hl) * (h*self.A - l*self.C)
+			#self.u = (1.0/gcd_hk) * (h*self.A - k*self.B)
+			#self.v = (1.0/gcd_hl) * (h*self.A - l*self.C)
 
 
 			self.u =  (1./h)*self.A - (1./k)*self.B
@@ -1133,9 +1130,8 @@ class Surface:
 				self.origin = self.C + (1./k)*self.B
 
 
-	def plane(self):
-		
-		# Cut the plane from the postitions
+	def plane(self):		
+	# Cut the plane from the postitions
 		
 		# Define normal to the plane
 		self.n = normal(self.u,self.v)
@@ -1180,7 +1176,7 @@ class Surface:
 			rv = rv/normrv
 			
 			# now define rotation matrix
-#			R = np.zeros((3,3))
+			# R = np.zeros((3,3))
 			R[0,0] = cosphi + (rv[0]**2)*(1-cosphi)
 			R[0,1] = rv[0]*rv[1]*(1-cosphi) - rv[2]*sinphi
 			R[0,2] = rv[0]*rv[2]*(1-cosphi) + rv[1]*sinphi
@@ -1258,11 +1254,11 @@ class Surface:
 				ii = avecslist[i]
 				self.avecsall[lab]=ii
 	
-#			# Find nearest unique atoms in the whole bulk 
-#			# This is needed to find nearest neigbours of each atom type
-#			uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atoms,\
-#					                   posrot,\
-#							   idxlist=range(len(posrot)))
+			# # Find nearest unique atoms in the whole bulk 
+			# # This is needed to find nearest neigbours of each atom type
+			# uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atoms,\
+			# 		                   posrot,\
+			# 				   idxlist=range(len(posrot)))
                         uqatoms,uqidx,uqidxbulk = self.__finduqatoms(self.atomsSmall,\
                                                            self.positionsSmall,\
                                                            idxlist=range(len(self.positionsSmall)))
@@ -1303,16 +1299,16 @@ class Surface:
 			self.planeatmsblk = self.atoms[idxlistblk]
 	
 			# Translate plane so coordinate z=0	
-#			if abs(self.planepos[:,2]).all > 0:
-#				self.planepos[:,2] -= self.planepos[:,2]
+			# if abs(self.planepos[:,2]).all > 0:
+			# 	self.planepos[:,2] -= self.planepos[:,2]
 
 			# end if self.exists
 
 	def __finduqatoms(self,labels,pos,idxlist):
-		# Routine to find unique types of atoms from set of
-		# atom lables
-		# Return atom labels, and index of the atom on the plane
-		# and index of atoms in the bulk structure
+	# Routine to find unique types of atoms from set of
+	# atom lables
+	# Return atom labels, and index of the atom on the plane
+	# and index of atoms in the bulk structure
 
 		uql = [] # unique labels
 		uqi = [] # index of representative atom on surface
@@ -1331,17 +1327,17 @@ class Surface:
 		return uql,uqi,uqibulk
 
 	def __anticipatoryvecs(self,atom,bulk,neighonly=False):
-		# Routine to find anticipatory vectors for atom
-		# by looking through it nearest neighbours 
+	# Routine to find anticipatory vectors for atom
+	# by looking through it nearest neighbours 
 
-		# Find nearest neighbours of the atom
-		# Construct array with the distance and indices of atoms in 
-		# bulk
-		# Introcude threshold to find number neartest neighbours
-		# There are cases where atoms has N nearest neighbours, but
-		# but they have only slighlty different distances, for instance
-		# in the case of a-quarts-SiO2, Si has four NN, two has distance
-		# 1.62A and two 1.63A. Use threshold to find them
+	# Find nearest neighbours of the atom
+	# Construct array with the distance and indices of atoms in 
+	# bulk
+	# Introcude threshold to find number neartest neighbours
+	# There are cases where atoms has N nearest neighbours, but
+	# but they have only slighlty different distances, for instance
+	# in the case of a-quarts-SiO2, Si has four NN, two has distance
+	# 1.62A and two 1.63A. Use threshold to find them
 		Nthresh = 0.1
 
 		neigh = np.zeros((len(bulk),2))
@@ -1359,7 +1355,7 @@ class Surface:
 		# substract first elements from all others and round the 
 		# result to 12 decimal place
 		shift = neigh[0,0].copy()
-#		neigh[:,0] -= neigh[0,0] 
+		# neigh[:,0] -= neigh[0,0] 
 		neigh[:,0] -= shift
 
 		neigh = CleanMatElements(neigh)
@@ -1386,29 +1382,29 @@ class Surface:
 		# The vectors are  assumed to be equivalent if the angle
 		# between vectors and z-axis is the same
 		
-#		if len(avecs) > 1:
-#			z = np.array((0,0,1))
-#			nz = 1
-#			ang = []
-#			idx = []
-#			ii = 0
-#			for v in avecs:
-#				nv = np.linalg.norm(v)
-#				cosphi = np.dot(v,z)/(nv*nz)
-#				if cosphi not in ang:
-#					ang.append(cosphi)
-#					idx.append(ii)
-#				ii += 1
-#			avecs = avecs[idx]
+		# if len(avecs) > 1:
+		# 	z = np.array((0,0,1))
+		# 	nz = 1
+		# 	ang = []
+		# 	idx = []
+		# 	ii = 0
+		# 	for v in avecs:
+		# 		nv = np.linalg.norm(v)
+		# 		cosphi = np.dot(v,z)/(nv*nz)
+		#		if cosphi not in ang:
+		# 			ang.append(cosphi)
+		# 			idx.append(ii)
+		# 		ii += 1
+		# 	avecs = avecs[idx]
 
 		return avecs
 
 	def initpvec(self):
-		# Initialize primitive vecotrs
-		# Algorithm:
-		# Take first atom in the surface, calculate its nearest 
-		# neighbours, and define primitive vectors as the 
-		# vectors pointing to the nearest two atoms. 
+	# Initialize primitive vecotrs
+	# Algorithm:
+	# Take first atom in the surface, calculate its nearest 
+	# neighbours, and define primitive vectors as the 
+	# vectors pointing to the nearest two atoms. 
 
 		# Shift coordinates so that 1st atom is in origin
 		orgsave = self.planepos[0]
@@ -1462,33 +1458,33 @@ class Surface:
 		# Reduce a and b
 		self.a, self.b = reduction(self.a, self.b)
 
-#		print "REDUCED VECTORS"
-#		print "A", self.a, np.linalg.norm(self.a)
-#		print "B", self.b, np.linalg.norm(self.b)
+		# print "REDUCED VECTORS"
+		# print "A", self.a, np.linalg.norm(self.a)
+		# print "B", self.b, np.linalg.norm(self.b)
 		
 		# Shift coordinates back to orginals positions 
 		self.planepos += orgsave
 
 	def initpvecNEW(self):
-		# Initialize primitive vecotrs
-		# Algorithm:
-		# Take first atom in the surface, calculate its nearest 
-		# neighbours, and define primitive vectors as the 
-		# vectors pointing to the nearest two atoms. 
+	# Initialize primitive vecotrs
+	# Algorithm:
+	# Take first atom in the surface, calculate its nearest 
+	# neighbours, and define primitive vectors as the 
+	# vectors pointing to the nearest two atoms. 
 
-		# Algortihm used:
-		# Check two conditions:
-		# 1) If lattice constant for given plane can be expresed 
-		#    in term of intiger multiplications of primitive vector:
-		#        n*|a| = |u| , n=1,2,3,....
-		# 2) If length of the scalar projection of the primitive 
-		#    vector on the lattice vector is equal to 0.5*(|u|**2)
-		#    This can be shown from the properties of dot product:
-		#   dot(a,u) == 0.5*(|u|**2) when a_u = |a|*cos(phi) == 0.5*|u|
-		#
-		#   If any of those conditions is met, the pair of vectors 
-		#   are the primitive vectors for this lattice
-
+	# Algortihm used:
+	# Check two conditions:
+	# 1) If lattice constant for given plane can be expresed 
+	#    in term of intiger multiplications of primitive vector:
+	#        n*|a| = |u| , n=1,2,3,....
+	# 2) If length of the scalar projection of the primitive 
+	#    vector on the lattice vector is equal to 0.5*(|u|**2)
+	#    This can be shown from the properties of dot product:
+	#   dot(a,u) == 0.5*(|u|**2) when a_u = |a|*cos(phi) == 0.5*|u|
+	#
+	#   If any of those conditions is met, the pair of vectors 
+	#   are the primitive vectors for this lattice
+		
 		# Primitive vectors not found yet
 		self.exists = False
 		
@@ -1528,7 +1524,7 @@ class Surface:
 				else:
 					ma = na%nu
 	
-#				print nu,na,ma
+				# print nu,na,ma
 	
 				if round(ma,6) == 0.0: primitive = True
 	
@@ -1592,24 +1588,24 @@ class Surface:
 		self.planepos += orgsave
 
 	def initpvecNEW2(self):
-		# Initialize primitive vecotrs
-		# Algorithm:
-		# Take first atom in the surface, calculate its nearest 
-		# neighbours, and define primitive vectors as the 
-		# vectors pointing to the nearest two atoms. 
+	# Initialize primitive vecotrs
+	# Algorithm:
+	# Take first atom in the surface, calculate its nearest 
+	# neighbours, and define primitive vectors as the 
+	# vectors pointing to the nearest two atoms. 
 
-		# Algortihm used:
-		# Check two conditions:
-		# 1) If lattice constant for given plane can be expresed 
-		#    in term of intiger multiplications of primitive vector:
-		#        n*|a| = |u| , n=1,2,3,....
-		# 2) If length of the scalar projection of the primitive 
-		#    vector on the lattice vector is equal to 0.5*(|u|**2)
-		#    This can be shown from the properties of dot product:
-		#   dot(a,u) == 0.5*(|u|**2) when a_u = |a|*cos(phi) == 0.5*|u|
-		#
-		#   If any of those conditions is met, the pair of vectors 
-		#   are the primitive vectors for this lattice
+	# Algortihm used:
+	# Check two conditions:
+	# 1) If lattice constant for given plane can be expresed 
+	#    in term of intiger multiplications of primitive vector:
+	#        n*|a| = |u| , n=1,2,3,....
+	# 2) If length of the scalar projection of the primitive 
+	#    vector on the lattice vector is equal to 0.5*(|u|**2)
+	#    This can be shown from the properties of dot product:
+	#   dot(a,u) == 0.5*(|u|**2) when a_u = |a|*cos(phi) == 0.5*|u|
+	#
+	#   If any of those conditions is met, the pair of vectors 
+	#   are the primitive vectors for this lattice
 
 		# Primitive vectors not found yet
 		self.exists = False
@@ -1652,10 +1648,10 @@ class Surface:
 	
 				if round(ma,6) == 0.0: primitive = True
 	
-		#		# 2nd condition
-		#		dau = np.dot(self.a,self.u)
-		#		print "2nd condition:",round(abs(dau),5),round((nu**2)/2,5)
-		#		if round(abs(dau),5) == round((nu**2)/2,5): primitive = True
+				# # 2nd condition
+				# dau = np.dot(self.a,self.u)
+				# print "2nd condition:",round(abs(dau),5),round((nu**2)/2,5)
+				# if round(abs(dau),5) == round((nu**2)/2,5): primitive = True
 
 				# 3rd condition u and a are colinear
 				check = np.cross(self.a,self.u)
@@ -1690,11 +1686,11 @@ class Surface:
 	
 				if round(mb,6) == 0.0 : primitive = True
 	
-				# 2nd condition
-		#		dbv = np.dot(self.b,self.v)
-		#		
-		#		if round(abs(dbv),5) == round((nv**2)/2,5): primitive = True
-		#
+				# # 2nd condition
+				# dbv = np.dot(self.b,self.v)
+				# 
+				# if round(abs(dbv),5) == round((nv**2)/2,5): primitive = True
+		
 				# 3rd condition u and a are colinear
 				check = np.cross(self.b,self.v)
 				# Clean numeric noise
@@ -1731,8 +1727,8 @@ class Surface:
 
 
 	def primitivecell(self):
-		# Calculate the norm of primitive vectors a,b , 
-		# angle between them and the area of primitive cell
+	# Calculate the norm of primitive vectors a,b , 
+	# angle between them and the area of primitive cell
 
 		self.norma=np.linalg.norm(self.a)
 		self.normb=np.linalg.norm(self.b)
@@ -1746,14 +1742,14 @@ class Surface:
 		self.primarea = self.norma * self.normb * sinphi
 
 def normal(vec1,vec2):
-	# Calculate normal to the plane given by vec1 and vec2
+# Calculate normal to the plane given by vec1 and vec2
 		result = np.cross(vec1,vec2)
 		return result
 
 def rotmat2d(phi):
-	# Calculate clockwise rotation matrix around z-axis 
-	# 
-	# phi - input angle, in radians
+# Calculate clockwise rotation matrix around z-axis 
+# 
+# phi - input angle, in radians
 
 	mat = np.zeros((2,2))
 
@@ -1766,8 +1762,8 @@ def rotmat2d(phi):
 
 
 def FindAllDivisors(x):
-	# Algorithm taken from
-	# http://stackoverflow.com/questions/12421969/finding-all-divisors-of-a-number-optimization
+# Algorithm taken from
+# http://stackoverflow.com/questions/12421969/finding-all-divisors-of-a-number-optimization
 	divList = []
 	y = 1
 	while y <= m.sqrt(x):
@@ -1782,9 +1778,9 @@ def FindAllDivisors(x):
 	return divList
 
 def reduction(a,b):
-	# Primitive vectors reduction algortihm
-	# Refeference:
-	# Zur, McGil, J. Appl. Phys. 55, 378 (1984)
+# Primitive vectors reduction algortihm
+# Refeference:
+# Zur, McGil, J. Appl. Phys. 55, 378 (1984)
 
 	reduced = False
 
@@ -1820,14 +1816,12 @@ def reduction(a,b):
 
 
 def Superlattice(a,b,n):
-
-	# Find all the possible superlattices formed from primitive cell
-	# (a,b) multiplied by n
-	# a - primitive cell vector a
-	# b - primitive cell vector b
-	# n - primitive cell multiplicator
-
-	# Based on  Zur, McGil, J. Appl. Phys. 55, 378 (1984) eqs. (2.3)-(2.6)
+# Find all the possible superlattices formed from primitive cell
+# (a,b) multiplied by n
+# a - primitive cell vector a
+# b - primitive cell vector b
+# n - primitive cell multiplicator
+# Based on  Zur, McGil, J. Appl. Phys. 55, 378 (1984) eqs. (2.3)-(2.6)
 
 	# Find the divisors on n
 
@@ -1865,7 +1859,6 @@ def Superlattice(a,b,n):
 
 class Interface:
 	def __init__(self,vecSub,Substrate,nL):
-
 		# Substrate surface and atoms below it
 		posSubBlk = Substrate.planeposblk.copy() 
 		# Substrate atom labels
@@ -1889,15 +1882,15 @@ class Interface:
 
 	def __CreateSurface(self,posin,atoms,vec1,vec2,nlayers,\
 			    periodic=True):
-		# Create surface given reduced superlattice vectors 
-		# and plane coordinates coordinates
-		# The output surface is rotated so that 
-		# vec1 point x direction
-		# Return
-		# - positions and labels of surface
-		# - rotated anticipatory vectors
-		# - rotated vectors
-		# list of indexes of atom belonging to the plane
+	# Create surface given reduced superlattice vectors 
+	# and plane coordinates coordinates
+	# The output surface is rotated so that 
+	# vec1 point x direction
+	# Return
+	# - positions and labels of surface
+	# - rotated anticipatory vectors
+	# - rotated vectors
+	# list of indexes of atom belonging to the plane
 		idxlist = []
 		planeatms = []
 
@@ -1935,7 +1928,7 @@ class Interface:
 		# Shift the coordiante system so the origin is on first atom
 		# We need this for calculations in barycentric coordinates
 
-#		pos -= pos[0] # Does not work for large number of atoms 
+		# pos -= pos[0] # Does not work for large number of atoms 
 		shift = pos[0].copy()
 		shift = posPlane[originIdx].copy()
 		pos -= shift
@@ -1981,10 +1974,10 @@ class Interface:
 		# and corresponind atom labels
 		planeatms = tmplabels[idxlist]
 
-#		ii=0
-#		for i in planepos:
-#			print planeatms[ii],i[0],i[1],i[2]
-#			ii+=1
+		# ii=0
+		# for i in planepos:
+		# 	print planeatms[ii],i[0],i[1],i[2]
+		# 	ii+=1
 
 		# Rotate the plane in such a way that vec1 is aligned 
 		# with x axis
@@ -2039,12 +2032,11 @@ class Interface:
 
 
 	def __barycentric(self,p,p1,p2,p3):
-
-		# Converstion to barycentric coordinates
-		# Source:
-		# http://en.wikipedia.org/wiki/Barycentric_coordinate_system_%28mathematics%29
-		# TODO:
-		# BE CAREFUL ABOUT THE ROUNDING!
+	# Converstion to barycentric coordinates
+	# Source:
+	# http://en.wikipedia.org/wiki/Barycentric_coordinate_system_%28mathematics%29
+	# TODO:
+	# BE CAREFUL ABOUT THE ROUNDING!
 		alpha = ((p2[1] - p3[1])*(p[0] - p3[0]) +\
 			 (p3[0] - p2[0])*(p[1] - p3[1])) /\
 			((p2[1] - p3[1])*(p1[0] - p3[0]) + \
@@ -2065,12 +2057,11 @@ class Interface:
 		return alpha, beta, gamma
 
 	def __removeperiodic(self,pos,vec1,vec2):
+	# Find the atoms in the superlattice that are
+	# translations of the other atoms 
 
-		# Find the atoms in the superlattice that are
-		# translations of the other atoms 
-
-		# Rude and not effecient solution 
-		# Try more through array interception
+	# Rude and not effecient solution 
+	# Try more through array interception
 
 		r = range(2)
 		uniqlist=[]
@@ -2110,18 +2101,18 @@ class Interface:
 
 
 #########################################
-#					#
-#					#
-#          Start program 		#
-#					#
-#					#
+#										#
+#										#
+# 			Start program 				#
+#										#
+#										#
 #########################################
 
 #start timer
 tStart = time.time()
 atomTyp = {}
 # Read input
-subCIF, useMillerList, maxMillerInd, MillerIndList, nL = readInput(inputFile)
+subCIF, useMillerList, maxMillerInd, MillerIndList, nL, checkPolarity = readInput(inputFile)
 
 # create a list of Miller indices
 if not useMillerList:
@@ -2146,6 +2137,11 @@ print
 
 primFailed = [] # stuctures for which cound find primtive vectors
 notExist = [] # stuctures for which given orientation does not exist
+isPolar = []; # if the structure is polar or not
+perodicity  = []; # if polar, report the perodicity in angstrom; otherwise report NaN
+minDiffRate = []; # the minimal difference rate
+polarFilename=subCIF.split(".")[0]+"-poalrity.txt"
+
 # Start the loop on Miller indices 
 for subMillerString in MillerList:
 	#MATERIAL 1
@@ -2158,7 +2154,7 @@ for subMillerString in MillerList:
 	#nbulk = max(Miller)*2 # use the max Miller index to ensure non-empty surface
 
 	Sub = Surface(transM,positions,atoms,atomTyp,Miller)
-#	Sub.bulk(nbulk)
+	# Sub.bulk(nbulk)
 	Sub.positions = bigBulk.positions.copy()
 	Sub.atoms = bigBulk.atoms.copy()
 	Sub.positionsSmall = bigBulk.positionsSmall.copy()
@@ -2166,6 +2162,7 @@ for subMillerString in MillerList:
 
 	Sub.construct()
 	Sub.plane()
+
 	if not Sub.exists: 
 		print "!!! Orientation does not exists!!!"
 		print "!!! Proceeding to next one !!!"
@@ -2239,6 +2236,24 @@ for subMillerString in MillerList:
 		file.write("atom %12.6f  %12.6f  %12.6f  %5s\n"%(i[0],i[1],i[2],atomTyp[iface.SSurfAtm[ii]]))
 		ii+= 1
 	file.close()
+
+	# check the polarity here
+	if checkPolarity:
+		print "Check the poalrity"
+		polar = False; 
+		ped = 11;
+		minDiff = 0.02;
+		isPolar.append(polar);
+		perodicity.append(ped);
+		minDiffRate.append(minDiff);
+		if polar:
+			print "The structure is polar with perodicity %s angstrom."%ped  
+		else:
+			print "The structure is non-polar, with a minimal distance difference rate %s."%minDiff 
+		file = open(polarFilename, 'a')
+		file.write(strufilename+" %d\t\t%f\t\t%f\n"%(polar,ped,minDiff))
+		file.close()
+
 	# end of the loop on Miller indices 
 
 # nlayers? #
@@ -2267,5 +2282,7 @@ for i in primFailed:
 	file.write("%s\n"%i)
 file.write("\nRuntime: %i min %i sec\n"%(runtime[0],runtime[1]))
 file.close()
+
+
 
 # End of program
