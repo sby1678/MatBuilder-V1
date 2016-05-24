@@ -418,6 +418,7 @@ def ReadCIF(filename,atomTypes):
             #Find duplicates    
             if coordtmp not in postmp:
                 postmp.append(coordtmp)
+                # print 'TYPE',type(atoms)
                 atoms.append(atomlabels[iatlab])
 
         # If first atom or only one atom, create position array
@@ -2268,8 +2269,8 @@ class Interface:
         #  periodicity = 0  - double number saying what is the periodicity of the strucure in angstrom
         # minDiffRate - double number saying what is the minimal distance rate found during the chekcing procedure (especially usful for understanding the polar structures)
         
-        vecX = self.vecSubR[0,range(2)];
-        vecY = self.vecSubR[1,range(2)];
+        vecX = self.vecSubR[0,0:2]
+        vecY = self.vecSubR[1,0:2]
         periodicity = float("nan")
 
 
@@ -2506,11 +2507,11 @@ def compute_min_dist(vec_v, vec_a, vec_b):
 
 
 #########################################
-#                    #
-#                    #
-#          Start program         #
-#                    #
-#                    #
+#                                       #
+#                                       #
+#            Start program              #
+#                                       #
+#                                       #
 #########################################
 
 #start timer
@@ -2549,7 +2550,7 @@ isPolar = []; # if the structure is polar or not
 perodicity  = []; # if polar, report the perodicity in angstrom; otherwise report NaN
 minDiffRate = []; # the minimal difference rate
 polarFilepath=subCIF.split(".")[0]+"-poalrity.txt"
-polarFilepath = os.path.join(save_path, polarFilepath)
+polarFilepath = os.path.join(savePath, polarFilepath)
 file = open(polarFilepath, 'w+')
 file.write("Filename\t\tisPolar\t\tperodicity\t\tminDiffRate\n")
 file.close()
@@ -2638,7 +2639,7 @@ for subMillerString in MillerList:
     """
 
     # Output in FHI-AIMS .in format
-    strufilepath = os.path.join(save_path, strufilename+".in")
+    strufilepath = os.path.join(savePath, strufilename+".in")
     file = open(strufilepath,'w')
     file.write("lattice_vector   %12.6f   %12.6f   %12.6f\n"%(iface.vecSubR[0][0],iface.vecSubR[0][1],iface.vecSubR[0][2]))
     file.write("lattice_vector   %12.6f   %12.6f   %12.6f\n"%(iface.vecSubR[1][0],iface.vecSubR[1][1],iface.vecSubR[1][2]))

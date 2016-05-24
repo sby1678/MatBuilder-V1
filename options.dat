@@ -4,5 +4,6 @@ maxMillerInd 		1 				# Maximal miller index for all three dimesions
 MillerIndList 		1 1 1|1 0 1 	# Miller Indices you wish to proceed 
 nLayer 				9.5 			# Thickness of Deposit/Substrate slabs [A]
 checkPolarity 		1 				# 0 for not check; 1 for check 
-z_digit 			4 				# options for check polar
+z_digit 			1e-4 				# options for check polar
 dis_tol_rate 		0.0001			# options for check polar
+
