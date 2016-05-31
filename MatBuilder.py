@@ -2244,7 +2244,7 @@ class Interface:
             ii += 1
         return uniqlist
 
-    def checkPolar(self,atom_coor,atomLabels, z_layer_tol=1e-3, dist_tol_rate=0.01, max_compare = float("Inf"), inverse_struc = False):
+    def checkPolar(self,atom_coor,atomLabels, z_layer_tol=1e-3, dist_tol_rate=1e-3, max_compare = float("Inf"), inverse_struc = False):
         # Description of the input variables:
         # - self: not used here, but required by Python
         # - atom_coor: of the atoms, numpy.array(Natoms,3)
